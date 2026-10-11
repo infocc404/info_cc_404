@@ -6,31 +6,49 @@
   <title>info cc 404 — منصة ملفات مهندس دولة في الإعلام الآلي</title>
   <meta name="description" content="منصة ملفات الدروس، الأعمال الموجهة، الأعمال التطبيقية والامتحانات لطلبة مهندس دولة في الإعلام الآلي بالجزائر (الأفواج G1 إلى G10).">
   <meta name="theme-color" content="#F0EEE6">
+  <meta name="google-site-verification" content="info-cc-404-verification-placeholder">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- OpenGraph Meta -->
+  <meta property="og:title" content="info cc 404 — منصة ملفات مهندس دولة في الإعلام الآلي">
+  <meta property="og:description" content="كل دروس، سلاسل TD، مواضيع TP وامتحانات الدفعة في بلاصة وحدة مقسمة حسب الأفواج G1..G10.">
+  <meta property="og:type" content="website">
 
   <!-- Google Fonts: IBM Plex Sans Arabic + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- 1. Sticky Header -->
+  <!-- 1. Sticky Header Navigation -->
   <header>
     <div class="header-inner">
-      <a href="#hero" class="brand">
+      <a href="#/" class="brand" title="info cc 404 — الصفحة الرئيسية">
         <div class="brand-icon">404</div>
         <div class="brand-title">info_cc_<span class="mono">404</span></div>
       </a>
 
-      <nav>
-        <a href="#groups-section" class="nav-link" id="navGroupsLink" style="display: none;">الأفواج</a>
-        <a href="#files-section" class="nav-link">الملفات</a>
-        <a href="#admin-section" class="nav-link" id="navAdminLink" style="display: none;">الإدارة</a>
+      <!-- Navigation Bar: الرئيسية | الأفواج | الأساتذة | الملفات | الإدارة | فوجي -->
+      <nav id="mainNav" aria-label="التنقل الرئيسي">
+        <a href="#/" class="nav-link" id="navHomeLink">الرئيسية</a>
+        <a href="#/groupes" class="nav-link" id="navGroupesLink">الأفواج</a>
+        <a href="#/profs" class="nav-link" id="navProfsLink">الأساتذة</a>
+        <a href="#/fichiers" class="nav-link" id="navFilesLink">الملفات</a>
+        <a href="#/admin" class="nav-link" id="navAdminLink" style="display: none;">الإدارة</a>
+        <a href="#/" class="nav-link" id="myGroupBtn" style="display: none;">فوجي</a>
       </nav>
 
       <div class="header-actions">
+        <a href="info-cc-404.zip" download="info-cc-404.zip" class="btn btn-secondary btn-sm" title="تحميل أرشيف المشروع كاملاً بصيغة ZIP">
+          📦 تحميل ملفات المشروع (.ZIP)
+        </a>
         <button id="logoutBtn" class="btn btn-secondary btn-sm" style="display: none;">
           خروج
         </button>
@@ -38,226 +56,141 @@
     </div>
   </header>
 
-  <main>
-    <!-- 2. Hero Section -->
-    <section class="hero" id="hero">
-      <div class="hero-content">
-        <span class="hero-tag">INGÉNIEUR D'ÉTAT EN INFORMATIQUE</span>
-        <h1 class="hero-title">كل دروس وتمارين الدفعة، في بلاصة وحدة</h1>
-        <p class="hero-desc">
-          المنصة الطلابية المخصصة لطلبة مهندس دولة في الإعلام الآلي (الأفواج من G1 إلى G10). تصفح وحمل المحاضرات، سلاسل الـ TD، مواضيع الـ TP وحوليات الامتحانات المنظمة حسب السداسي والمادة مع إمكانية التصفية المباشرة حسب فوجك.
-        </p>
+  <main id="mainContainer">
+    <!-- PAGE 1: HOME (#/) — Wireframe 1 -->
+    <div id="homeView">
+      <!-- Hero Section -->
+      <section class="hero" id="hero">
+        <div class="hero-content">
+          <span class="hero-tag">INGÉNIEUR D'ÉTAT EN INFORMATIQUE</span>
+          <h1 class="hero-title">كل دروس وتمارين الدفعة، في بلاصة وحدة</h1>
+          <p class="hero-desc">
+            المنصة الطلابية المخصصة لطلبة مهندس دولة في الإعلام الآلي (الأفواج من G1 إلى G10). تصفح وحمل المحاضرات، سلاسل الـ TD، مواضيع الـ TP وحوليات الامتحانات المنظمة حسب السداسي والمادة مع إمكانية التصفية المباشرة حسب فوجك.
+          </p>
 
-        <!-- يظهر فقط عند تسجيل الدخول -->
-        <div id="heroLoggedInBadge" style="display: none;">
-          <a href="#files-section" class="btn btn-primary">تصفح ملفات دفعتك الآن</a>
-        </div>
-      </div>
-
-      <!-- Login / Signup Form (visible only when logged out) -->
-      <div class="auth-box" id="authBox">
-        <div class="auth-tabs">
-          <button type="button" class="auth-tab active" id="tabLoginBtn">تسجيل الدخول</button>
-          <button type="button" class="auth-tab" id="tabSignupBtn">إنشاء حساب</button>
-        </div>
-
-        <form id="authForm" novalidate>
-          <div class="form-group">
-            <label for="email">البريد الإلكتروني</label>
-            <input id="email" type="email" required autocomplete="email" dir="ltr" placeholder="student@univ.dz">
+          <!-- 3 Stat Boxes in Hero (Wireframe 1) -->
+          <div class="stats-strip" style="margin-bottom: 20px;">
+            <div class="stat-box">
+              <div class="stat-value">10</div>
+              <div class="stat-label">أفواج (G1 إلى G10)</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value">7</div>
+              <div class="stat-label">مواد في السداسي 1</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="homeStatFiles">0</div>
+              <div class="stat-label">ملف متوفر للتحميل</div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="password">كلمة السر</label>
-            <input id="password" type="password" minlength="6" required autocomplete="current-password" dir="ltr" placeholder="••••••••">
-          </div>
-
-          <!-- Group Select (1 to 10) on Signup -->
-          <div class="form-group" id="groupSignupGroup" style="display: none;">
-            <label for="signupGroup">اختر فوجك الدراسي (Groupe)</label>
-            <select id="signupGroup">
-              <option value="1">Groupe 1 (G1)</option>
-              <option value="2">Groupe 2 (G2)</option>
-              <option value="3">Groupe 3 (G3)</option>
-              <option value="4">Groupe 4 (G4)</option>
-              <option value="5">Groupe 5 (G5)</option>
-              <option value="6">Groupe 6 (G6)</option>
-              <option value="7">Groupe 7 (G7)</option>
-              <option value="8">Groupe 8 (G8)</option>
-              <option value="9">Groupe 9 (G9)</option>
-              <option value="10">Groupe 10 (G10)</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width: 100%; margin-top: 6px;">
-            دخول
-          </button>
-          <p id="authMsg" class="msg-text"></p>
-        </form>
-      </div>
-    </section>
-
-    <!-- 3. How It Works -->
-    <section class="how-section">
-      <h2 class="section-title">كيف يعمل الموقع؟</h2>
-      <p class="section-sub">ثلاث خطوات بسيطة للوصول لجميع مراجع واختبارات الدفعة:</p>
-
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-num">01.</div>
-          <div class="step-title">أنشئ حسابك وسجل فوجك</div>
-          <p class="step-desc">سجل بالإيميل واختر فوجك من G1 إلى G10 لتخصيص السلاسل الموجهة لك.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">02.</div>
-          <div class="step-title">ابحث وصنّف المقاييس</div>
-          <p class="step-desc">فلترة سريعة حسب السداسي (S1/S2)، المادة (Algo, Arch...) ونوع الوثيقة.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-num">03.</div>
-          <div class="step-title">حمّل وتصفّح مباشرة</div>
-          <p class="step-desc">روابط تحميل آمنة ومباشرة مع إمكانية التصفح دون انقطاع.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 4. After Login: Stats & Groups Section -->
-    <section id="groups-section" style="display: none;">
-      <!-- Stats Strip -->
-      <div class="stats-strip">
-        <div class="stat-box">
-          <div class="stat-value" id="statFiles">0</div>
-          <div class="stat-label">ملف متوفر للتحميل</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="statSubjects">0</div>
-          <div class="stat-label">مقاييس ومواد دراسية</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value">10</div>
-          <div class="stat-label">أفواج الدفعة (G1 إلى G10)</div>
-        </div>
-      </div>
-
-      <!-- 10 Clickable Groups Cards -->
-      <h2 class="section-title">أفواج الدفعة (G1 إلى G10)</h2>
-      <p class="section-sub">اضغط على أي فوج لتصفية الملفات التابعة له فورياً:</p>
-      <div class="groups-grid" id="groupsGrid"></div>
-    </section>
-
-    <!-- 5. Files Section -->
-    <section id="files-section">
-      <div class="card-header" style="border: none; padding-bottom: 0;">
-        <div>
-          <h2 class="section-title">الملفات والموارد الدراسية</h2>
-          <p class="section-sub">تصفح جميع ملفات الدروس، الأعمال الموجهة، التطبيقية والامتحانات.</p>
-        </div>
-      </div>
-
-      <!-- Search & Filters Bar -->
-      <div class="files-filter-bar">
-        <input id="q" type="search" placeholder="ابحث باسم الملف، الأستاذ أو الكلمة المفتاحية..." aria-label="بحث في الملفات">
-
-        <div class="filters-row">
-          <select id="fSem" aria-label="السداسي">
-            <option value="">كل السداسيات</option>
-          </select>
-          <select id="fSubject" aria-label="المادة">
-            <option value="">كل المواد</option>
-          </select>
-          <select id="fKind" aria-label="النوع">
-            <option value="">كل الأنواع</option>
-          </select>
-          <select id="fGroup" aria-label="الفوج">
-            <option value="">كل الأفواج (G1 - G10)</option>
-          </select>
-        </div>
-
-        <div class="files-summary">
-          <span id="filesCount">0 ملف متوفر</span>
-          <button id="resetFiltersBtn" class="btn btn-ghost btn-sm" style="text-decoration: underline;">إعادة ضبط الفلاتر</button>
-        </div>
-      </div>
-
-      <!-- Files List Container -->
-      <div class="files-list" id="filesList">
-        <div class="empty-box">جاري تحميل الملفات...</div>
-      </div>
-    </section>
-
-    <!-- 6. Admin Section (Admins Only) -->
-    <section id="admin-section" class="card admin-card" style="display: none;">
-      <div class="card-header">
-        <div>
-          <h2>لوحة الإدارة — رفع ملف جديد</h2>
-          <p>رفع ملفات الدروس والتمارين وتوجيهها للدفعة كاملة أو لفوج معين.</p>
-        </div>
-      </div>
-
-      <form id="upForm">
-        <div class="grid-2">
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="upTitle">عنوان الملف الكامل</label>
-            <input id="upTitle" required placeholder="مثال: TD 1 - Algorithmique et Structures de Données">
-          </div>
-
-          <div class="form-group">
-            <label for="upSubject">المادة (Module)</label>
-            <input id="upSubject" required placeholder="مثال: Algo, Arch, Analyse, Système...">
-          </div>
-
-          <div class="form-group">
-            <label for="upSem">السداسي (Semestre)</label>
-            <select id="upSem">
-              <option value="S1">S1</option>
-              <option value="S2">S2</option>
-              <option value="Annuel">Annuel</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="upKind">نوع الوثيقة</label>
-            <select id="upKind">
-              <option value="cours">Cours</option>
-              <option value="td">TD</option>
-              <option value="tp">TP</option>
-              <option value="exam">Examen</option>
-              <option value="autre">Autre</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="upGroup">الفوج المستهدف (Groupe)</label>
-            <select id="upGroup">
-              <option value="">كل الأفواج (All groups)</option>
-              <option value="1">Groupe 1 (G1)</option>
-              <option value="2">Groupe 2 (G2)</option>
-              <option value="3">Groupe 3 (G3)</option>
-              <option value="4">Groupe 4 (G4)</option>
-              <option value="5">Groupe 5 (G5)</option>
-              <option value="6">Groupe 6 (G6)</option>
-              <option value="7">Groupe 7 (G7)</option>
-              <option value="8">Groupe 8 (G8)</option>
-              <option value="9">Groupe 9 (G9)</option>
-              <option value="10">Groupe 10 (G10)</option>
-            </select>
-          </div>
-
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="upFile">اختر الملف للرفع (PDF, ZIP, DOCX...)</label>
-            <input id="upFile" type="file" required>
+          <!-- يظهر فقط عند تسجيل الدخول -->
+          <div id="heroLoggedInBadge" style="display: none;">
+            <a href="#/groupes" class="btn btn-primary" style="margin-left: 10px;">تصفح صفحة الأفواج</a>
+            <a href="#/fichiers" class="btn btn-secondary">البحث في كل الملفات</a>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="upSubmitBtn">
-          رفع الملف الآن
-        </button>
-        <p id="upMsg" class="msg-text"></p>
-      </form>
-    </section>
+        <!-- Login / Signup Form (visible only when logged out) -->
+        <div class="auth-box" id="authBox">
+          <div class="auth-tabs">
+            <button type="button" class="auth-tab active" id="tabLoginBtn">تسجيل الدخول</button>
+            <button type="button" class="auth-tab" id="tabSignupBtn">إنشاء حساب</button>
+          </div>
+
+          <form id="authForm" novalidate>
+            <div class="form-group">
+              <label for="email">البريد الإلكتروني</label>
+              <input id="email" type="email" required autocomplete="email" dir="ltr" placeholder="student@univ.dz">
+            </div>
+
+            <div class="form-group">
+              <label for="password">كلمة السر</label>
+              <input id="password" type="password" minlength="6" required autocomplete="current-password" dir="ltr" placeholder="••••••••">
+            </div>
+
+            <!-- Group Select (1 to 10) on Signup -->
+            <div class="form-group" id="groupSignupGroup" style="display: none;">
+              <label for="signupGroup">اختر فوجك الدراسي (Groupe)</label>
+              <select id="signupGroup">
+                <option value="1">Groupe 1 (G1)</option>
+                <option value="2">Groupe 2 (G2)</option>
+                <option value="3">Groupe 3 (G3)</option>
+                <option value="4">Groupe 4 (G4)</option>
+                <option value="5">Groupe 5 (G5)</option>
+                <option value="6">Groupe 6 (G6)</option>
+                <option value="7">Groupe 7 (G7)</option>
+                <option value="8">Groupe 8 (G8)</option>
+                <option value="9">Groupe 9 (G9)</option>
+                <option value="10">Groupe 10 (G10)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width: 100%; margin-top: 6px;">
+              دخول
+            </button>
+            <p id="authMsg" class="msg-text"></p>
+
+            <div class="auth-footer-links" id="forgotPassWrap">
+              <button type="button" class="link-btn" id="forgotPassBtn">نسيت كلمة السر؟</button>
+            </div>
+          </form>
+
+          <!-- Password Recovery Form (appears on PASSWORD_RECOVERY event) -->
+          <div class="password-recovery-card" id="passwordRecoveryBox" style="display: none;">
+            <h3>تعيين كلمة سر جديدة</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0 0 14px;">أدخل كلمة السر الجديدة لحسابك (6 أحرف على الأقل):</p>
+            <form id="recoveryForm" novalidate>
+              <div class="form-group">
+                <label for="recoveryPassword">كلمة السر الجديدة</label>
+                <input id="recoveryPassword" type="password" minlength="6" required autocomplete="new-password" dir="ltr" placeholder="••••••••">
+              </div>
+              <button type="submit" class="btn btn-primary" id="recoverySubmitBtn" style="width: 100%; margin-top: 6px;">
+                حفظ كلمة السر وتأكيد الحساب
+              </button>
+              <p id="recoveryMsg" class="msg-text"></p>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works (Wireframe 1) -->
+      <section class="how-section" id="howSection">
+        <h2 class="section-title">كيف تستعمل الموقع</h2>
+        <p class="section-sub">ثلاث خطوات بسيطة للوصول لجميع مراجع واختبارات الدفعة:</p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-num">01.</div>
+            <div class="step-title">سجّل واختار فوجك</div>
+            <p class="step-desc">أنشئ حسابك واختر فوجك من G1 إلى G10 لتخصيص سلاسل الـ TD ومشاريع الـ TP التابعة لفوجك.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-num">02.</div>
+            <div class="step-title">افتح صفحة فوجك</div>
+            <p class="step-desc">من رابط «الأفواج» في الشريط العلوي، لتتعرف على أساتذة الـ TD والـ TP الخاصين بفوجك وقاعات التدريس.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-num">03.</div>
+            <div class="step-title">حمّل الدروس</div>
+            <p class="step-desc">محاضرات الكور موحدة لكامل الدفعة والأفواج، متاحة بروابط مباشرة وآمنة للتحميل الفوري.</p>
+          </div>
+        </div>
+
+        <!-- Small hint specified in Wireframe 1 -->
+        <div class="home-usage-hint">
+          <span>💡</span>
+          <span>للوصول للأفواج: اضغط <strong>«الأفواج»</strong> في الشريط العلوي.</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- DYNAMIC VIEW CONTAINER FOR HASH ROUTES -->
+    <!-- (#/groupes, #/groupe/N, #/groupe/N/cours, #/groupe/N/cours/:id, #/cours, #/fichiers, #/admin) -->
+    <div id="dynamicView"></div>
   </main>
 
-  <!-- 7. Footer -->
+  <!-- Footer -->
   <footer>
     <div class="footer-inner">
       <div>
@@ -269,7 +202,9 @@
     </div>
   </footer>
 
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script type="module" src="/app.js"></script>
+  <script src="data.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

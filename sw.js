@@ -1,31 +1,31 @@
 // ============================================================================
-// Service Worker — info cc 404 (PWA Offline Support)
+// Service Worker — info cc 404 (PWA Offline Support v3)
 // ============================================================================
 // هاذ الفايل يسمح للتطبيق يخدم حتى ونت بلا أنترنت (Offline) في الجامعة
 // Ce fichier permet à l'application de fonctionner hors-ligne
 // ============================================================================
 
-const CACHE_NAME = "info-cc-404-v1";
+const CACHE_NAME = "info-cc-404-v3";
 
-// الملفات الأساسية لي نخزنوها مسبقا (App Shell)
+// الملفات الأساسية لي نخزنوها مسبقا (App Shell) — مسارات نسبية بدون / في البداية
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/app.js",
-  "/manifest.webmanifest",
-  "/icon.svg",
-  "/icon-192.png",
-  "/icon-512.png",
+  "./",
+  "./index.html",
+  "./style.css",
+  "./data.js",
+  "./app.js",
+  "./manifest.webmanifest",
+  "./icon.svg",
+  "./icon-192.png",
+  "./icon-512.png",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js",
-  "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap"
+  "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
 ];
 
 // 1. تثبيت الـ Service Worker وحفظ الملفات في الكاش
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // نزيدو الملفات لي نقدرو، ونتجاوزو لي يفشلو بلا ما يحبس التثبيت
       return Promise.allSettled(
         STATIC_ASSETS.map((url) => cache.add(url))
       );
@@ -79,7 +79,7 @@ self.addEventListener("fetch", (event) => {
         .catch(() => {
           // إذا ما كاش نت وطلبنا صفحة HTML، نرجعو الكاش تاع index.html
           if (req.mode === "navigate") {
-            return caches.match("/index.html");
+            return caches.match("./index.html") || caches.match("index.html");
           }
         });
 

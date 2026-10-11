@@ -703,3 +703,1151 @@ footer {
     justify-content: flex-end;
   }
 }
+
+/* ============================================================================
+   NEW FEATURES (Group Pages, 7-Subject Timetable, Breadcrumbs & Password Recovery)
+   All styling strictly reuses existing variables & aesthetic design constitution
+   ============================================================================ */
+
+/* Password Recovery UI */
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-btn);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  display: inline-block;
+  transition: color 0.15s ease;
+}
+
+.link-btn:hover {
+  color: var(--accent-btn-hover);
+}
+
+.auth-footer-links {
+  margin-top: 10px;
+  text-align: center;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.password-recovery-card {
+  display: none;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  margin-top: 16px;
+  border-top: 3px solid var(--accent-btn);
+}
+
+.password-recovery-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  color: var(--text-main);
+}
+
+/* Group Page Section Container */
+#groupPage {
+  display: none;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+  width: 100%;
+}
+
+/* Breadcrumbs */
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.breadcrumb-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-nav a:hover {
+  color: var(--accent-btn);
+}
+
+.breadcrumb-sep {
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.breadcrumb-active {
+  color: var(--accent-btn);
+  font-weight: 600;
+}
+
+/* Group Page Header */
+.group-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.group-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.group-badge-lg {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.4rem;
+  background-color: var(--accent-btn);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  letter-spacing: -0.5px;
+}
+
+.group-title-text h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.group-title-text p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.badge-mygroup {
+  display: inline-block;
+  background-color: rgba(46, 125, 79, 0.15);
+  color: var(--success);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  border: 1px solid rgba(46, 125, 79, 0.3);
+}
+
+.group-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Quick Recent Files Block (آخر الملفات) */
+.recent-group-files-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.recent-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.recent-group-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recent-chips-grid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.recent-file-chip {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  min-width: 200px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.recent-file-chip:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.recent-chip-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-chip-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Timetable Block */
+.timetable-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.timetable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.timetable-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timetable-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.schedule-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+
+.schedule-item:hover {
+  border-color: var(--accent);
+}
+
+.schedule-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-subject {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.schedule-details {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.schedule-unconfirmed {
+  font-size: 0.75rem;
+  color: var(--danger);
+  font-style: italic;
+  background: var(--danger-soft);
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* 7-Subject Summary Table */
+.subject-table-wrap {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow-sm);
+}
+
+.subject-table-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subject-table-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.table-responsive-desktop {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.subject-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.subject-table th {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+  padding: 12px 14px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.subject-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.subject-table tr:last-child td {
+  border-bottom: none;
+}
+
+.subject-table tr:hover td {
+  background-color: var(--bg-card-hover);
+}
+
+.subject-cell-title {
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subject-cell-title a {
+  color: var(--text-main);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.subject-cell-title a:hover {
+  color: var(--accent-btn);
+}
+
+.subject-cell-teacher {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.table-count-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background-color: var(--accent-soft);
+  color: var(--accent-btn);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.table-count-link:hover {
+  background-color: var(--accent-btn);
+  color: #fff;
+}
+
+.table-count-link.total {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.dimmed-cell {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: center;
+  user-select: none;
+}
+
+/* Mobile Stacked Cards for 7-Subject Table */
+.subject-cards-mobile {
+  display: none;
+  padding: 14px;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subject-card-mobile-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subject-card-mobile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.subject-card-mobile-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.subject-count-col {
+  background: var(--bg-card);
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.subject-count-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+@media (max-width: 768px) {
+  .table-responsive-desktop {
+    display: none;
+  }
+  .subject-cards-mobile {
+    display: flex;
+  }
+}
+
+/* Subject View Specific View */
+.subject-detail-box {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.subject-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.back-to-group-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--accent-btn);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  transition: all 0.15s ease;
+}
+
+.back-to-group-btn:hover {
+  background: var(--accent-btn);
+  color: #fff;
+}
+
+/* Type Chips Filter Bar */
+.type-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.type-chip-btn {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.type-chip-btn:hover {
+  border-color: var(--accent-btn);
+  color: var(--text-main);
+}
+
+.type-chip-btn.active {
+  background-color: var(--accent-btn);
+  color: #fff;
+  border-color: var(--accent-btn);
+}
+
+/* Accessibility & Preferences */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================================
+   WIREFRAME 1-4 LAYOUTS: Home Hint, Groups Timetable, Group Teachers & Cours Grid
+   ============================================================================ */
+
+/* Home Wireframe 1 Hint */
+.home-usage-hint {
+  margin-top: 18px;
+  background-color: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-usage-hint strong {
+  color: var(--accent-btn);
+}
+
+/* Wireframe 2: General Timetable Table */
+.general-timetable-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-top: 36px;
+  box-shadow: var(--shadow-sm);
+}
+
+.general-timetable-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.general-timetable-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.general-timetable-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+}
+
+.timetable-full-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+  text-align: center;
+  font-size: 0.88rem;
+}
+
+.timetable-full-table th {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+  padding: 12px 10px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.timetable-full-table td {
+  padding: 12px 10px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.timetable-time-cell {
+  background-color: var(--bg-card);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--accent-btn);
+  white-space: nowrap;
+}
+
+.timetable-session-cell {
+  background-color: #fff;
+  transition: background-color 0.15s ease;
+}
+
+.timetable-session-cell:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.session-name {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 0.85rem;
+}
+
+.session-teacher-room {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.lunch-row td {
+  background-color: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Wireframe 3: Group Page Teachers Table */
+.group-teachers-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: #fff;
+  margin-bottom: 30px;
+}
+
+.group-teachers-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.group-teachers-table th {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+  padding: 12px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+
+.group-teachers-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.group-teachers-table tr:hover td {
+  background-color: var(--bg-card-hover);
+}
+
+.teacher-name-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.teacher-name-box strong {
+  color: var(--text-main);
+  font-size: 0.88rem;
+}
+
+.teacher-name-box span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+/* Mobile Stacked Cards for Group Page Teachers */
+.group-teachers-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.group-teacher-mobile-card {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.group-teacher-mobile-card .top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.group-teacher-mobile-card .info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .group-teachers-table-wrap {
+    display: none;
+  }
+  .group-teachers-mobile {
+    display: flex;
+  }
+}
+
+/* Wireframe 4: Cours Grid (3 per row) */
+.cours-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.cours-subject-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.cours-subject-card:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.cours-subject-header h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.cours-subject-header p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.cours-teacher-info {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.cours-teacher-info strong {
+  color: var(--text-main);
+}
+
+.cours-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  border-top: 1px dashed var(--border);
+  padding-top: 12px;
+}
+
+.cours-count-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--accent-btn);
+  background: var(--accent-soft);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .cours-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .cours-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   FEATURE A & FEATURE B: TEACHER PAGES & ROLE/USER MANAGEMENT (v3)
+   All styling strictly reuses existing CSS variables and visual design rules
+   ============================================================================ */
+
+/* Teacher Pages Grid */
+.profs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.prof-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.prof-card:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.prof-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.prof-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--accent-soft);
+  color: var(--accent-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+
+.prof-card-info h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.prof-card-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.prof-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.prof-tag {
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.prof-tag.cours-tag {
+  background: var(--accent-soft);
+  color: var(--accent-btn);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.prof-stats-strip {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.prof-stats-strip strong {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+}
+
+.prof-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+  margin-top: auto;
+}
+
+/* Teacher Link in Timetable Table */
+.teacher-link {
+  color: var(--accent-btn);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.teacher-link:hover {
+  color: var(--accent-btn-hover);
+}
+
+/* Teacher Detail Schedule Table */
+.prof-schedule-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  margin-top: 16px;
+}
+
+.prof-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
+.prof-schedule-table th,
+.prof-schedule-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prof-schedule-table th {
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+.prof-schedule-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.prof-schedule-table tbody tr:hover {
+  background: var(--bg-card);
+}
+
+/* Role & User Management Tabs & Table (Feature B) */
+.admin-tab-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.admin-tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.admin-tab-btn:hover {
+  color: var(--text-main);
+  background-color: var(--bg-card-hover);
+}
+
+.admin-tab-btn.active {
+  color: #fff;
+  background-color: var(--accent-btn);
+}
+
+.users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  margin-top: 16px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
+.users-table th,
+.users-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.users-table th {
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.users-table tbody tr:hover {
+  background: var(--bg-card);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.role-badge.role-owner {
+  background: #fdf2f0;
+  color: var(--accent-btn);
+  border: 1px solid var(--accent);
+}
+
+.role-badge.role-admin {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.role-badge.role-uploader {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.role-badge.role-student {
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* Error Notice Banner */
+.error-banner {
+  background-color: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.error-banner-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+
+
