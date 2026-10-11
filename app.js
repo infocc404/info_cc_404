@@ -3,9 +3,8 @@
 // ============================================================================
 
 // 1) إعدادات Supabase — أدخل مفاتيحك الخاصة من Project Settings > API
-const SUPABASE_URL = "PUT_YOUR_PROJECT_URL_HERE";
-const SUPABASE_ANON_KEY = "PUT_YOUR_ANON_KEY_HERE";
-
+const SUPABASE_URL = "https://ubqezeogtzesrkyvicnc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_EbY0t9yKdz2vb-L09ddA_Q_bie0CCci";
 const BUCKET = "course-files";
 const GROUPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const KINDS = {
