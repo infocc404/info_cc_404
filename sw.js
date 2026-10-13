@@ -1,28 +1,23 @@
 // ============================================================================
-// Service Worker — info cc 404 (PWA Offline Support v3)
-// ============================================================================
-// هاذ الفايل يسمح للتطبيق يخدم حتى ونت بلا أنترنت (Offline) في الجامعة
-// Ce fichier permet à l'application de fonctionner hors-ligne
+// Service Worker — info cc 404 (Network-First)
 // ============================================================================
 
-const CACHE_NAME = "info-cc-404-v3";
+const CACHE_NAME = "info-cc-404-v6";
 
-// الملفات الأساسية لي نخزنوها مسبقا (App Shell) — مسارات نسبية بدون / في البداية
 const STATIC_ASSETS = [
   "./",
-  "./index.html",
-  "./style.css",
-  "./data.js",
-  "./app.js",
-  "./manifest.webmanifest",
-  "./icon.svg",
-  "./icon-192.png",
-  "./icon-512.png",
-  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js",
-  "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+  "index.html",
+  "style.css",
+  "config.js",
+  "data.js",
+  "app.js",
+  "manifest.webmanifest",
+  "icon.svg",
+  "icon-192.png",
+  "icon-512.png"
 ];
 
-// 1. تثبيت الـ Service Worker وحفظ الملفات في الكاش
+// Install: Cache core assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -34,7 +29,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// 2. تفعيل وحذف النسخ القديمة من الكاش
+// Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -50,12 +45,15 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// 3. اعتراض الطلبات (Fetch Handler)
+// Fetch: Network-First strategy
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-  const url = new URL(req.url);
 
-  // إذا كان طلب Supabase API أو Storage، نخليه Network First
+  // Only handle GET requests
+  if (req.method !== "GET") return;
+
+  // Supabase or dynamic signed URLs -> direct network
+  const url = new URL(req.url);
   if (url.hostname.includes("supabase.co")) {
     event.respondWith(
       fetch(req).catch(() => caches.match(req))
@@ -63,27 +61,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // بالنسبة للملفات الثابتة (HTML, CSS, JS, Fonts): Stale-While-Revalidate
+  // Network-first for everything else
   event.respondWith(
-    caches.match(req).then((cachedResponse) => {
-      const fetchPromise = fetch(req)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(req, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // إذا ما كاش نت وطلبنا صفحة HTML، نرجعو الكاش تاع index.html
+    fetch(req)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(req, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(req).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
           if (req.mode === "navigate") {
             return caches.match("./index.html") || caches.match("index.html");
           }
         });
-
-      return cachedResponse || fetchPromise;
-    })
+      })
   );
 });

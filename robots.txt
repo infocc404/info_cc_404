@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://locoviber16.github.io/info-cc-404/sitemap.xml

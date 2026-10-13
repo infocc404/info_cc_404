@@ -1,10 +1,10 @@
 -- ============================================================================
--- info cc 404 — كود إعداد قاعدة البيانات وتحديث الرتب (Supabase SQL v3)
+-- info cc 404 — كود إعداد قاعدة البيانات وتحديث الرتب (Supabase SQL v3 Hardened)
 -- ============================================================================
--- نفذ هذا الكود في Supabase Dashboard > SQL Editor > New query > Run
+-- نفذ هذا الكود في: Supabase Dashboard > SQL Editor > New query > Run
 -- ============================================================================
 
--- 1. جدول المشرفين الأساسيين (admins)
+-- 1. جدول المشرفين (admins)
 create table if not exists public.admins (
   user_id uuid primary key references auth.users(id) on delete cascade
 );
@@ -20,23 +20,29 @@ create table if not exists public.uploaders (
 create table if not exists public.files (
   id bigint generated always as identity primary key,
   title text not null,
-  semester text not null,
+  semester text not null default 'S1' check (semester in ('S1', 'S2', 'Annuel')),
   subject text not null,
-  kind text not null,
-  group_no smallint check (group_no between 1 and 10),
+  kind text not null check (kind in ('cours', 'td', 'tp', 'exam', 'autre')),
+  group_no smallint check (group_no is null or (group_no between 1 and 10)),
   path text not null,
   created_at timestamptz not null default now()
 );
 
--- إضافة عمود group_no إن لم يكن موجوداً مسبقاً
-alter table public.files add column if not exists group_no smallint check (group_no between 1 and 10);
+-- إضافة عمود group_no والتأكد من القيود في حال وجود الجدول مسبقاً
+alter table public.files add column if not exists group_no smallint check (group_no is null or (group_no between 1 and 10));
 
--- 4. تفعيل سياسات الأمان (Row Level Security - RLS)
+-- 4. الفهارس لتسريع الاستعلامات والتصفية (Indexes)
+create index if not exists idx_files_created_at on public.files(created_at desc);
+create index if not exists idx_files_subject_kind on public.files(subject, kind);
+create index if not exists idx_files_group_no on public.files(group_no);
+create index if not exists idx_uploaders_group_no on public.uploaders(group_no);
+
+-- 5. تفعيل سياسات الأمان على مستوى الصفوف (Row Level Security - RLS)
 alter table public.admins enable row level security;
 alter table public.uploaders enable row level security;
 alter table public.files enable row level security;
 
--- 5. دالة فحص وتحديد رتبة المستخدم الحالي (my_role)
+-- 6. دالة فحص وتحديد رتبة المستخدم الحالي (my_role)
 create or replace function public.my_role()
 returns text
 language plpgsql
@@ -54,11 +60,13 @@ begin
 
   select email into v_email from auth.users where id = v_uid;
 
-  -- فحص المالك (Owner) والمشرفين (Admins)
+  -- فحص المالك الأساسي (Owner)
+  if v_email = 'locoviber16@gmail.com' then
+    return 'owner';
+  end if;
+
+  -- فحص المشرفين (Admins)
   if exists (select 1 from public.admins where user_id = v_uid) then
-    if v_email = 'locoviber16@gmail.com' then
-      return 'owner';
-    end if;
     return 'admin';
   end if;
 
@@ -71,7 +79,7 @@ begin
 end;
 $$;
 
--- 6. دالة استعراض قائمة المستخدمين للمالك والمشرفين (owner_list_users)
+-- 7. دالة استعراض قائمة المستخدمين للمالك والمشرفين (owner_list_users)
 create or replace function public.owner_list_users()
 returns table (
   id uuid,
@@ -86,8 +94,8 @@ security definer
 set search_path = public, auth
 as $$
 begin
-  -- التحقق من صلاحية الاستدعاء (المشرف أو المالك فقط)
-  if auth.uid() is null or not exists (select 1 from public.admins where user_id = auth.uid()) then
+  -- التحقق من صلاحية الاستدعاء (المالك أو المشرف فقط)
+  if auth.uid() is null or public.my_role() not in ('owner', 'admin') then
     raise exception 'غير مصرح لك باستعراض قائمة المستخدمين.';
   end if;
 
@@ -111,16 +119,20 @@ begin
 end;
 $$;
 
--- 7. دالة تعيين رافع ملفات (owner_set_uploader)
+-- 8. دالة تعيين رافع ملفات (owner_set_uploader)
 create or replace function public.owner_set_uploader(p_user uuid, p_group smallint)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 begin
-  if auth.uid() is null or not exists (select 1 from public.admins where user_id = auth.uid()) then
+  if auth.uid() is null or public.my_role() not in ('owner', 'admin') then
     raise exception 'غير مصرح لك بتعيين رافعي الملفات.';
+  end if;
+
+  if p_group is not null and (p_group < 1 or p_group > 10) then
+    raise exception 'رقم الفوج غير صحيح (يجب أن يكون بين 1 و 10).';
   end if;
 
   insert into public.uploaders (user_id, group_no)
@@ -129,15 +141,15 @@ begin
 end;
 $$;
 
--- 8. دالة إزالة رافع ملفات (owner_remove_uploader)
+-- 9. دالة إزالة رافع ملفات (owner_remove_uploader)
 create or replace function public.owner_remove_uploader(p_user uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 begin
-  if auth.uid() is null or not exists (select 1 from public.admins where user_id = auth.uid()) then
+  if auth.uid() is null or public.my_role() not in ('owner', 'admin') then
     raise exception 'غير مصرح لك بإزالة رافعي الملفات.';
   end if;
 
@@ -146,10 +158,10 @@ end;
 $$;
 
 -- ============================================================================
--- 9. سياسات الوصول (RLS Policies)
+-- 10. سياسات الوصول (RLS Policies)
 -- ============================================================================
 
--- تنظيف السياسات القديمة
+-- تنظيف السياسات السابقة
 drop policy if exists "admins read all or own" on public.admins;
 drop policy if exists "uploaders read own" on public.uploaders;
 drop policy if exists "members read files" on public.files;
@@ -168,12 +180,12 @@ create policy "uploaders read own" on public.uploaders
   for select to authenticated
   using (user_id = auth.uid() or public.my_role() in ('admin', 'owner'));
 
--- سياسة جدول files (القراءة متاحة لجميع المسجلين)
+-- سياسة جدول files (القراءة لجميع المستخدمين المسجلين)
 create policy "members read files" on public.files
   for select to authenticated
   using (true);
 
--- سياسة رفع الملفات: الأدمن والمالك للكل، ورافع الملفات لفوزه أو الملفات العامة
+-- سياسة رفع الملفات
 create policy "uploaders or admin adds files" on public.files
   for insert to authenticated
   with check (
@@ -187,7 +199,7 @@ create policy "uploaders or admin adds files" on public.files
     )
   );
 
--- سياسة حذف الملفات: الأدمن والمالك فقط (أو رافع الملف لملفات فوجه)
+-- سياسة حذف الملفات
 create policy "uploaders or admin deletes files" on public.files
   for delete to authenticated
   using (
@@ -199,7 +211,7 @@ create policy "uploaders or admin deletes files" on public.files
   );
 
 -- ============================================================================
--- 10. إعداد مساحة التخزين الخاصة (Storage: course-files)
+-- 11. إعداد مساحة التخزين السحابي (Storage: course-files)
 -- ============================================================================
 insert into storage.buckets (id, name, public)
 values ('course-files', 'course-files', false)
@@ -211,10 +223,12 @@ drop policy if exists "admin deletes storage" on storage.objects;
 drop policy if exists "authorized uploads storage" on storage.objects;
 drop policy if exists "authorized deletes storage" on storage.objects;
 
+-- القراءة للمسجلين فقط
 create policy "members read storage" on storage.objects
   for select to authenticated
   using (bucket_id = 'course-files');
 
+-- الرفع للمخولين (المالك، المشرف، رافع الملفات)
 create policy "authorized uploads storage" on storage.objects
   for insert to authenticated
   with check (
@@ -222,6 +236,7 @@ create policy "authorized uploads storage" on storage.objects
     and public.my_role() in ('admin', 'owner', 'uploader')
   );
 
+-- الحذف للمخولين
 create policy "authorized deletes storage" on storage.objects
   for delete to authenticated
   using (
@@ -230,8 +245,8 @@ create policy "authorized deletes storage" on storage.objects
   );
 
 -- ============================================================================
--- لتعيين نفسك كـ Owner / Admin بعد تسجيل حسابك:
+-- ملاحظة إرشادية للمالك:
+-- تم ضبط locoviber16@gmail.com تلقائياً كـ Owner دائم في دالة my_role().
+-- ويمكن إضافة أي مشرفين إضافيين عبر إدراج معرفاتهم في جدول public.admins:
+-- insert into public.admins (user_id) values ('USER_UUID_HERE');
 -- ============================================================================
--- insert into public.admins (user_id)
--- select id from auth.users where email = 'locoviber16@gmail.com'
--- on conflict do nothing;
