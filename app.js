@@ -159,29 +159,35 @@ async function fetchRoleAndGroup() {
       console.warn("RPC my_role error:", error);
       state.role = "student";
       state.uploaderGroup = null;
+      state.studentGroup = null;
       if (error.message && !error.message.includes("Failed to fetch")) {
         showGlobalError(`خطأ في التحقق من الرتبة: ${error.message}`);
       }
       return;
     }
-    // Read data?.[0]?.user_role strictly
-    if (Array.isArray(data)) {
+    // Read authoritative role, uploader_group, and assigned_group from DB
+    if (Array.isArray(data) && data.length > 0) {
       state.role = data[0]?.user_role || "student";
       state.uploaderGroup = data[0]?.uploader_group ?? null;
+      state.studentGroup = data[0]?.assigned_group ?? null;
     } else if (typeof data === "object" && data !== null) {
       state.role = data.user_role || "student";
       state.uploaderGroup = data.uploader_group ?? null;
+      state.studentGroup = data.assigned_group ?? null;
     } else if (typeof data === "string") {
       state.role = data;
       state.uploaderGroup = null;
+      state.studentGroup = null;
     } else {
       state.role = "student";
       state.uploaderGroup = null;
+      state.studentGroup = null;
     }
   } catch (err) {
     console.warn("Network or execution error in my_role:", err);
     state.role = "student";
     state.uploaderGroup = null;
+    state.studentGroup = null;
   }
 }
 
@@ -195,16 +201,6 @@ function showGlobalError(msg) {
   box.textContent = msg;
   document.body.appendChild(box);
   setTimeout(() => box.remove(), 6000);
-}
-
-// Read student group strictly from user metadata (no local editing)
-function getStudentGroupFromMetadata() {
-  const metaGroup = state.user?.user_metadata?.group_no;
-  if (metaGroup) {
-    const parsed = parseInt(metaGroup, 10);
-    if (parsed >= 1 && parsed <= 10) return parsed;
-  }
-  return 1;
 }
 
 // Router Guard: hashes not starting with #/ are ignored
@@ -226,7 +222,6 @@ supabase.auth.onAuthStateChange((event, session) => {
 
     if (state.user) {
       await fetchRoleAndGroup();
-      state.studentGroup = getStudentGroupFromMetadata();
       await Promise.all([loadFilesCache(), loadTeacherInfoCache()]);
 
       const target = state.redirectAfterLogin || normalizeHash(location.hash);
@@ -237,6 +232,7 @@ supabase.auth.onAuthStateChange((event, session) => {
       // Logged out
       state.role = "student";
       state.uploaderGroup = null;
+      state.studentGroup = null;
       state.filesCache = [];
       state.teacherInfoCache = [];
       location.hash = "#/";
@@ -513,6 +509,7 @@ function renderApp() {
   state.currentRoute = hash;
 
   const isOwner = state.role === "owner";
+  const isAdmin = state.role === "admin";
   const isUploader = state.role === "uploader";
 
   // Build shell
@@ -538,15 +535,18 @@ function renderApp() {
           <a href="#/horaire" class="nav-link ${hash === "#/horaire" ? "active" : ""}">
             <span>الجدول الزمني</span>
           </a>
+          <a href="#/teachers" class="nav-link ${hash === "#/teachers" || hash.startsWith("#/teacher/") ? "active" : ""}">
+            <span>الأساتذة وملفاتهم</span>
+          </a>
           ${
-            isOwner || isUploader
+            isOwner || isAdmin || isUploader
               ? `<a href="#/upload" class="nav-link ${hash === "#/upload" ? "active" : ""}">
                   <span>رفع الملفات</span>
                  </a>`
               : ""
           }
           ${
-            isOwner
+            isOwner || isAdmin
               ? `<a href="#/admin" class="nav-link ${hash === "#/admin" ? "active" : ""}">
                   <span>الإدارة</span>
                  </a>`
@@ -604,6 +604,7 @@ function renderApp() {
 
 function getRoleBadgeText(role, uploaderGroup) {
   if (role === "owner") return "المالك";
+  if (role === "admin") return "مشرف";
   if (role === "uploader") return `رئيس القسم (G${uploaderGroup || ""})`;
   return "طالب";
 }
@@ -692,11 +693,12 @@ function attachShellEvents() {
 
 // 10. FILTER ACCESSIBLE FILES FOR THE USER
 function getAccessibleFiles() {
-  if (state.role === "owner") return state.filesCache;
+  if (state.role === "owner" || state.role === "admin") return state.filesCache;
   const sg = state.studentGroup;
   return state.filesCache.filter(f => {
     if (f.kind === "cours") return true; // Cours is available to all
     if (f.group_no === null || f.group_no === undefined) return true;
+    if (!sg) return false; // Default deny if user has no trusted student group assigned
     return f.group_no === sg;
   });
 }
@@ -728,6 +730,22 @@ function dispatchRoute(hash) {
     return;
   }
 
+  // #/teachers — teacher directory available to all signed-in users
+  if (hash === "#/teachers") {
+    renderTeachersView(page);
+    return;
+  }
+
+  // #/teacher/:kind/:subjectId/:groupNo — view files for a teacher/subject
+  const teacherMatch = hash.match(/^#\/teacher\/(cours|td|tp)\/([^\/]+)(?:\/(\d+))?$/);
+  if (teacherMatch) {
+    const kind = teacherMatch[1];
+    const subjectId = teacherMatch[2];
+    const groupNo = teacherMatch[3] ? parseInt(teacherMatch[3], 10) : (state.studentGroup || null);
+    renderTeacherFilesView(page, kind, subjectId, groupNo);
+    return;
+  }
+
   // #/horaire
   if (hash === "#/horaire") {
     renderTimetableView(page);
@@ -742,9 +760,9 @@ function dispatchRoute(hash) {
     return;
   }
 
-  // #/upload (owner and uploader only)
+  // #/upload (owner, admin and uploader)
   if (hash === "#/upload") {
-    if (state.role !== "owner" && state.role !== "uploader") {
+    if (state.role !== "owner" && state.role !== "admin" && state.role !== "uploader") {
       renderAccessDenied(page);
       return;
     }
@@ -752,9 +770,9 @@ function dispatchRoute(hash) {
     return;
   }
 
-  // #/admin (OWNER ONLY)
+  // #/admin (owner and admin)
   if (hash === "#/admin") {
-    if (state.role !== "owner") {
+    if (state.role !== "owner" && state.role !== "admin") {
       renderAccessDenied(page);
       return;
     }
@@ -786,7 +804,7 @@ function renderAccessDenied(page) {
 function renderHomeView(page) {
   const sg = state.studentGroup;
   const recentFiles = state.filesCache
-    .filter(f => f.kind === "cours" || f.group_no === sg || f.group_no === null)
+    .filter(f => f.kind === "cours" || (sg && f.group_no === sg) || f.group_no === null)
     .slice(0, 5);
 
   page.innerHTML = `
@@ -797,9 +815,9 @@ function renderHomeView(page) {
 
     <!-- 3 Shortcut Cards -->
     <div class="welcome-grid">
-      <a href="#/groupe/${sg}" class="shortcut-card">
-        <div class="title">فوجي (<span class="mono">G${sg}</span>)</div>
-        <div class="desc">دروس، أعمال موجهة وتطبيقية خاصة بفوجك.</div>
+      <a href="${sg ? `#/groupe/${sg}` : '#/groupes'}" class="shortcut-card">
+        <div class="title">${sg ? `فوجي (<span class="mono">G${sg}</span>)` : 'الأفواج الدراسية'}</div>
+        <div class="desc">${sg ? 'دروس، أعمال موجهة وتطبيقية خاصة بفوجك.' : 'تصفح المحاضرات والملفات الدراسية.'}</div>
       </a>
       <a href="#/groupes" class="shortcut-card">
         <div class="title">الأفواج</div>
@@ -816,8 +834,8 @@ function renderHomeView(page) {
       <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--brown-dark);">الانتقال المباشر لأي فوج:</h3>
       <div class="chips-wrap" style="margin-bottom: 0;">
         ${[1,2,3,4,5,6,7,8,9,10].map(g => `
-          <a href="#/groupe/${g}" class="group-chip-btn ${g === sg ? 'current' : ''}">
-            G${g}${g === sg ? ' فوجك' : ''}
+          <a href="#/groupe/${g}" class="group-chip-btn ${sg && g === sg ? 'current' : ''}">
+            G${g}${sg && g === sg ? ' فوجك' : ''}
           </a>
         `).join("")}
       </div>
@@ -909,8 +927,8 @@ function renderGroupesView(page) {
 
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
       ${[1,2,3,4,5,6,7,8,9,10].map(g => `
-        <a href="#/groupe/${g}" class="content-card" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 16px; text-decoration: none; border: 1px solid ${g === sg ? 'var(--brown)' : 'var(--line)'}; position: relative;">
-          ${g === sg ? `<span style="position: absolute; top: 10px; left: 10px; background-color: var(--brown); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500;">فوجك</span>` : ''}
+        <a href="#/groupe/${g}" class="content-card" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 16px; text-decoration: none; border: 1px solid ${sg && g === sg ? 'var(--brown)' : 'var(--line)'}; position: relative;">
+          ${sg && g === sg ? `<span style="position: absolute; top: 10px; left: 10px; background-color: var(--brown); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500;">فوجك</span>` : ''}
           <div class="logo-badge-small mono" style="font-size: 16px; padding: 6px 14px; margin-bottom: 12px;">G${g}</div>
           <div style="font-weight: 600; font-size: 16px; color: var(--brown-dark);">الفوج ${g}</div>
           <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">تصفح الدروس والملفات</div>
@@ -1453,10 +1471,140 @@ function renderLessonsTableHtml(filesList) {
   `;
 }
 
+// 16A. PAGE: TEACHERS DIRECTORY (#/teachers)
+// Students see course teachers and teachers for their assigned group only.
+function renderTeachersView(page) {
+  const groupNo = state.studentGroup;
+  const isStaff = state.role === "owner" || state.role === "admin";
+  const entries = [];
+
+  SUBJECT_DEFINITIONS.forEach(sub => {
+    const courseTeacher = getResolvedTeacher("cours", sub.id, 0);
+    entries.push({
+      kind: "cours",
+      subjectId: sub.id,
+      subject: sub,
+      groupNo: null,
+      teacherName: courseTeacher.name,
+      label: "أستاذ الكور",
+      files: getAccessibleFiles().filter(f =>
+        f.kind === "cours" && normalizeSubjectId(f.subject) === sub.id
+      )
+    });
+
+    if (groupNo) {
+      const groupTeachers = (window.GROUP_TEACHERS && window.GROUP_TEACHERS[groupNo]) || {};
+      const assignment = groupTeachers[sub.id] || {};
+      ["td", "tp"].forEach(kind => {
+        if (!assignment[kind]) return;
+        const teacher = getResolvedTeacher(kind, sub.id, groupNo);
+        entries.push({
+          kind,
+          subjectId: sub.id,
+          subject: sub,
+          groupNo,
+          teacherName: teacher.name,
+          label: kind.toUpperCase() + " — الفوج G" + groupNo,
+          files: getAccessibleFiles().filter(f =>
+            f.kind === kind &&
+            normalizeSubjectId(f.subject) === sub.id &&
+            (f.group_no === groupNo || f.group_no === null || f.group_no === undefined)
+          )
+        });
+      });
+    }
+  });
+
+  const uniqueEntries = entries.filter((entry, index, all) =>
+    all.findIndex(other =>
+      other.kind === entry.kind &&
+      other.subjectId === entry.subjectId &&
+      other.groupNo === entry.groupNo
+    ) === index
+  );
+
+  page.innerHTML = `
+    <div class="breadcrumb"><a href="#/">الرئيسية</a><span>›</span><span class="current">الأساتذة</span></div>
+    <div class="page-banner">
+      <h2>الأساتذة وملفاتهم</h2>
+      <p>اختر الأستاذ أو المقياس لعرض الملفات المتاحة لك فقط.</p>
+    </div>
+    ${!groupNo && !isStaff ? `
+      <div class="content-card" style="margin-bottom:16px;border-right:4px solid var(--brown);">
+        <strong>لم يُحدَّد فوجك في حسابك بعد.</strong>
+        <p style="margin-top:6px;color:var(--muted);">يمكنك رؤية أساتذة الكور، لكن للوصول إلى ملفات TD وTP الخاصة بفوجك يجب على مسؤول المنصة تحديد رقم فوجك في إعدادات حسابك.</p>
+      </div>
+    ` : ""}
+    <div class="content-card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr><th>الأستاذ</th><th>المقياس</th><th>نوع الحصة</th><th>الملفات المتاحة</th><th>إجراء</th></tr></thead>
+          <tbody>
+            ${uniqueEntries.map(entry => `
+              <tr>
+                <td><strong>${escapeHtml(entry.teacherName || "غير محدد")}</strong></td>
+                <td>
+                  <strong>${escapeHtml(entry.subject.nameAr)}</strong>
+                  <div class="mono" style="font-size:12px;color:var(--muted);">${escapeHtml(entry.subject.nameFr)}</div>
+                </td>
+                <td>${escapeHtml(entry.label)}</td>
+                <td><span class="badge-tag mono">${entry.files.length}</span></td>
+                <td><a class="btn-primary" style="padding:5px 12px;width:auto;text-decoration:none;" href="#/teacher/${entry.kind}/${entry.subjectId}${entry.groupNo ? "/" + entry.groupNo : ""}">عرض الملفات</a></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      ${uniqueEntries.length === 0 ? `<p style="padding:20px;text-align:center;color:var(--muted);">لا توجد بيانات أساتذة متاحة حاليًا.</p>` : ""}
+    </div>
+  `;
+}
+
+// PAGE: FILES ASSOCIATED WITH A TEACHER'S SUBJECT / SESSION TYPE
+function renderTeacherFilesView(page, kind, subjectId, groupNo) {
+  const subject = getSubjectObj(subjectId);
+  const allowed = getAccessibleFiles();
+  const teacher = getResolvedTeacher(kind, subjectId, groupNo || state.studentGroup || 0);
+  let files = allowed.filter(f => {
+    if (normalizeSubjectId(f.subject) !== subjectId || f.kind !== kind) return false;
+    if (kind === "cours") return true;
+    if (!groupNo) return false;
+    return f.group_no === groupNo || f.group_no === null || f.group_no === undefined;
+  }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+  page.innerHTML = `
+    <div class="breadcrumb"><a href="#/teachers">الأساتذة</a><span>›</span><span class="current">${escapeHtml(teacher.name || "الأستاذ")}</span></div>
+    <div class="page-banner">
+      <h2>ملفات الأستاذ: ${escapeHtml(teacher.name || "غير محدد")}</h2>
+      <p>${escapeHtml(subject.nameAr)} (${escapeHtml(subject.nameFr)}) — ${kind === "cours" ? "الكور" : kind.toUpperCase()}${groupNo && kind !== "cours" ? " — الفوج G" + groupNo : ""}</p>
+    </div>
+    <div class="content-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <span class="badge-tag">عدد الملفات: ${files.length}</span>
+        <a href="#/teachers" class="btn-secondary" style="width:auto;text-decoration:none;">العودة إلى قائمة الأساتذة</a>
+      </div>
+      ${files.length ? `
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>عنوان الملف</th><th>تاريخ الإضافة</th><th>إجراء</th></tr></thead>
+            <tbody>${files.map(file => `
+              <tr>
+                <td><strong>${escapeHtml(file.title || "ملف بدون عنوان")}</strong></td>
+                <td class="mono">${formatDate(file.created_at)}</td>
+                <td><a href="#/voir/${encodeURIComponent(file.id)}" class="btn-primary" style="padding:5px 12px;width:auto;text-decoration:none;">عرض الملف</a></td>
+              </tr>
+            `).join("")}</tbody>
+          </table>
+        </div>
+      ` : `<div style="padding:24px;text-align:center;color:var(--muted);">لا توجد ملفات مرفوعة لهذا الأستاذ/المقياس ونوع الحصة حتى الآن، أو لا توجد ملفات متاحة لفوجك.</div>`}
+    </div>
+  `;
+}
+
 // 17. PAGE: TIMETABLE (#/horaire)
 function renderTimetableView(page) {
   const sg = state.studentGroup;
-  let selectedGroup = sg;
+  let selectedGroup = sg || 1;
 
   page.innerHTML = `
     <div class="page-banner">
@@ -2006,6 +2154,8 @@ async function renderAdminView(page) {
 // 20. PAGE: UPLOAD FILE (#/upload) FOR OWNER & HEAD
 async function renderUploadView(page) {
   const isOwner = state.role === "owner";
+  const isAdmin = state.role === "admin";
+  const isStaff = isOwner || isAdmin;
   const upGroup = state.uploaderGroup;
 
   page.innerHTML = `
@@ -2038,7 +2188,7 @@ async function renderUploadView(page) {
           <div class="form-group">
             <label class="form-label" for="uploadKind">نوع الحصة *</label>
             <select id="uploadKind" class="form-control mono" required>
-              ${isOwner ? '<option value="cours">cours (محاضرة)</option>' : ''}
+              ${isStaff ? '<option value="cours">cours (محاضرة)</option>' : ''}
               <option value="td">td (أعمال موجهة)</option>
               <option value="tp">tp (أعمال تطبيقية)</option>
               <option value="exam">exam (امتحان)</option>
@@ -2048,9 +2198,9 @@ async function renderUploadView(page) {
 
           <div class="form-group" id="uploadGroupWrap">
             <label class="form-label" for="uploadGroup">الفوج المستهدف *</label>
-            <select id="uploadGroup" class="form-control mono" ${!isOwner ? 'disabled' : ''}>
+            <select id="uploadGroup" class="form-control mono" ${!isStaff ? 'disabled' : ''}>
               ${
-                isOwner
+                isStaff
                   ? `
                     <option value="all">كل الأفواج (عام)</option>
                     ${[1,2,3,4,5,6,7,8,9,10].map(g => `<option value="${g}">G${g}</option>`).join("")}
@@ -2076,11 +2226,11 @@ async function renderUploadView(page) {
     <div class="content-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
         <h3 style="font-size: 16px; font-weight: 600; color: var(--brown-dark);">
-          ${isOwner ? "إدارة جميع ملفات المنصة" : `ملفاتي (الفوج G${upGroup})`}
+          ${isStaff ? "إدارة جميع ملفات المنصة" : `ملفاتي (الفوج G${upGroup})`}
         </h3>
 
         ${
-          isOwner
+          isStaff
             ? `
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <select id="filterUploadGroup" class="form-control mono" style="width: auto; padding: 4px 10px; font-size: 12px;">
@@ -2111,7 +2261,7 @@ async function renderUploadView(page) {
   const groupSelectWrap = document.getElementById("uploadGroupWrap");
   const groupSelect = document.getElementById("uploadGroup");
 
-  if (isOwner && kindSelect && groupSelectWrap) {
+  if (isStaff && kindSelect && groupSelectWrap) {
     const handleKindChange = () => {
       if (kindSelect.value === "cours") {
         groupSelectWrap.style.display = "none";
@@ -2156,7 +2306,7 @@ async function renderUploadView(page) {
     }
 
     let targetGroup = null;
-    if (isOwner) {
+    if (isStaff) {
       if (kind === "cours") {
         targetGroup = null;
       } else {
@@ -2172,7 +2322,8 @@ async function renderUploadView(page) {
 
     const timestamp = Date.now();
     const randStr = Math.random().toString(36).substring(2, 8);
-    const storagePath = `${timestamp}_${randStr}.pdf`;
+    const folder = targetGroup ? `g${targetGroup}` : "common";
+    const storagePath = `${folder}/${timestamp}_${randStr}.pdf`;
 
     let uploadedKey = null;
 
@@ -2206,7 +2357,7 @@ async function renderUploadView(page) {
       uploadSuccess.textContent = "تم رفع الملف وحفظه بنجاح.";
       uploadSuccess.style.display = "block";
       uploadForm.reset();
-      if (isOwner) handleKindChange();
+      if (isStaff && typeof handleKindChange === "function") handleKindChange();
 
       await loadFilesCache();
       renderUploadFilesTable();
@@ -2223,9 +2374,9 @@ async function renderUploadView(page) {
     const wrapper = document.getElementById("uploadFilesTableWrapper");
     if (!wrapper) return;
 
-    let files = isOwner ? [...state.filesCache] : state.filesCache.filter(f => f.group_no === upGroup);
+    let files = isStaff ? [...state.filesCache] : state.filesCache.filter(f => f.group_no === upGroup);
 
-    if (isOwner) {
+    if (isStaff) {
       const gFilter = document.getElementById("filterUploadGroup")?.value;
       const kFilter = document.getElementById("filterUploadKind")?.value;
       if (gFilter && gFilter !== "all") {
@@ -2339,9 +2490,9 @@ function renderAccountView(page) {
       <div class="form-group">
         <label class="form-label">فوجك الدراسي المسجل:</label>
         <div style="font-weight: 600; font-size: 16px; color: var(--brown-dark);" class="mono">
-          الفوج G${sg}
+          ${sg ? `الفوج G${sg}` : "غير محدد (يرجى مراجعة إدارة المنصة)"}
         </div>
-        <small style="color: var(--muted); font-size: 12px;">تم تحديد الفوج أثناء إنشاء الحساب ولا يمكن تعديله إلا من خلال مالك المنصة.</small>
+        <small style="color: var(--muted); font-size: 12px;">الفوج موثق ومعتمد من قاعدة البيانات ولا يمكن تعديله عبر بيانات الحساب المحلية.</small>
       </div>
 
       <hr style="border: 0; border-top: 1px solid var(--line); margin: 24px 0;">

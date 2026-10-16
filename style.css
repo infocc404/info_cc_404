@@ -490,6 +490,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   border-color: var(--brown-dark);
 }
 
+.role-badge.admin {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-color: #c7d2fe;
+}
+
 .role-badge.uploader {
   background-color: #fef3c7;
   color: #92400e;
@@ -924,7 +930,39 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   .page-body {
     padding: 16px;
   }
-  .app-topbar {
-    padding: 0 16px;
-  }
 }
+
+/* Footer */
+.site-footer {
+  margin-top: 40px;
+  padding: 20px 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.site-footer-link {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.site-footer-link:hover {
+  color: var(--brown-dark);
+  text-decoration: underline;
+}
+
+/* Staff Login Screen */
+.staff-auth-container {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
