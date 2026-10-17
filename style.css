@@ -966,3 +966,41 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   padding: 24px 16px;
 }
 
+
+/* Mobile-friendly controls for PDF preview and dense admin tables.
+   This adjusts spacing only and preserves the existing site palette. */
+@media (max-width: 600px) {
+  .pdf-viewer-toolbar {
+    align-items: stretch;
+    padding: 10px;
+    gap: 12px;
+  }
+  .pdf-toolbar-group {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+  }
+  .pdf-toolbar-group:first-child {
+    justify-content: flex-start;
+    overflow-wrap: anywhere;
+  }
+  .pdf-toolbar-group button {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 7px 10px !important;
+  }
+  .pdf-canvas-container {
+    padding: 8px;
+    min-height: 320px;
+    max-height: 70vh;
+  }
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .content-card {
+    padding: 16px;
+  }
+}
