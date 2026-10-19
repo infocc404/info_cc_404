@@ -3,7 +3,7 @@
 
 create table if not exists public.student_favorites (
   user_id uuid not null references auth.users(id) on delete cascade,
-  file_id uuid not null references public.files(id) on delete cascade,
+  file_id bigint not null references public.files(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (user_id, file_id)
 );
