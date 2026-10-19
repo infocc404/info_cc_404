@@ -175,6 +175,15 @@ async function fetchRoleAndGroup() {
       state.uploaderGroup = null;
       state.studentGroup = null;
     }
+    // Explicit fallback: some older my_role deployments may return no assigned group.
+    // Read only the current user's own profile; RLS must enforce user_id = auth.uid().
+    if (state.role === "student" && !state.studentGroup && state.user?.id) {
+      const { data: profile, error: profileError } = await supabase
+        .from("student_profiles").select("group_no").eq("user_id", state.user.id).maybeSingle();
+      if (!profileError && Number(profile?.group_no) >= 1 && Number(profile?.group_no) <= 10) {
+        state.studentGroup = Number(profile.group_no);
+      }
+    }
   } catch (err) {
     console.warn("Network or execution error in my_role:", err);
     state.role = "student";
@@ -590,6 +599,9 @@ function renderApp() {
           <a href="#/announcements" class="nav-link ${hash === "#/announcements" ? "active" : ""}">
             <span>الإعلانات</span>
           </a>
+          <a href="#/search" class="nav-link ${hash === "#/search" ? "active" : ""}"><span>البحث عن الملفات</span></a>
+          <a href="#/favorites" class="nav-link ${hash === "#/favorites" ? "active" : ""}"><span>ملفاتي المفضلة</span></a>
+          <a href="#/support" class="nav-link ${hash === "#/support" ? "active" : ""}"><span>الإبلاغ عن مشكلة</span></a>
           <a href="#/groupes" class="nav-link ${hash.startsWith("#/groupe") ? "active" : ""}">
             <span>الأفواج</span>
           </a>
@@ -857,6 +869,9 @@ function dispatchRoute(hash) {
     renderAnnouncementsView(page);
     return;
   }
+  if (hash === "#/search") { renderSearchPage(page); return; }
+  if (hash === "#/favorites") { renderFavoritesPage(page); return; }
+  if (hash === "#/support") { renderSupportPage(page); return; }
 
   // #/groupes
   if (hash === "#/groupes") {
@@ -994,6 +1009,21 @@ async function renderAnnouncementsView(page) {
   }
 }
 
+// Student productivity tools: full-text file search, personal favorites, and support reports.
+function renderSearchPage(page) {
+  const files = getAccessibleFiles();
+  page.innerHTML = `<div class="page-banner"><h2>البحث عن الملفات</h2><p>ابحث باسم الملف أو المادة أو الأستاذ، وستظهر الملفات المسموح لك بالوصول إليها فقط.</p></div>
+    <section class="content-card"><label for="globalFileSearch" class="form-label">كلمات البحث</label><input id="globalFileSearch" class="form-control" type="search" placeholder="مثال: Analyse، TD، اسم الأستاذ..." autocomplete="off"><div class="filter-row" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0"><select id="fileKindFilter" class="form-control" style="max-width:220px"><option value="">كل الأنواع</option><option value="cours">Cours</option><option value="td">TD</option><option value="tp">TP</option></select><span id="fileSearchCount" style="align-self:center;color:var(--muted);font-size:13px"></span></div><div id="fileSearchResults" class="search-results-grid"></div></section>`;
+  const input=page.querySelector('#globalFileSearch'), kind=page.querySelector('#fileKindFilter'), results=page.querySelector('#fileSearchResults'), count=page.querySelector('#fileSearchCount');
+  const draw=()=>{const q=input.value.trim().toLocaleLowerCase();const k=kind.value;const filtered=files.filter(f=>{const hay=[f.title,f.subject,f.kind,f.teacher_name,f.name].filter(Boolean).join(' ').toLocaleLowerCase();return (!q||hay.includes(q))&&(!k||String(f.kind).toLowerCase()===k)});count.textContent=`${filtered.length} نتيجة`;results.innerHTML=filtered.length?filtered.slice(0,100).map(f=>`<article class="content-card file-result-card"><strong>${escapeHtml(f.title||'ملف')}</strong><p>${escapeHtml(f.subject||'')} · ${escapeHtml(f.kind||'')} ${f.group_no?`· G${f.group_no}`:'· مشترك'}</p><a class="btn-primary" style="display:inline-block;width:auto;text-decoration:none" href="#/voir/${encodeURIComponent(f.id)}">فتح الملف</a> <button type="button" class="btn-secondary favorite-toggle" data-id="${escapeHtml(f.id)}">☆ حفظ في المفضلة</button></article>`).join(''):'<p class="empty-state">لا توجد ملفات مطابقة.</p>';results.querySelectorAll('.favorite-toggle').forEach(b=>b.onclick=()=>toggleFavorite(b.dataset.id,b));};
+  input.addEventListener('input',draw);kind.addEventListener('change',draw);draw();
+}
+async function loadFavoriteIds(){const {data,error}=await supabase.from('student_favorites').select('file_id').eq('user_id',state.user.id);if(error){console.warn('Favorites unavailable; apply migration_student_tools.sql',error.message);return [];}return (data||[]).map(x=>String(x.file_id));}
+async function toggleFavorite(fileId,button){const {data:existing,error:readError}=await supabase.from('student_favorites').select('file_id').eq('user_id',state.user.id).eq('file_id',String(fileId)).maybeSingle();if(readError){alert('تعذر قراءة المفضلة. تأكد من تطبيق migration_student_tools.sql.');return;}if(existing){const {error}=await supabase.from('student_favorites').delete().eq('user_id',state.user.id).eq('file_id',String(fileId));if(error){alert('تعذر حذف الملف من المفضلة.');return;}if(button)button.textContent='☆ حفظ في المفضلة';}else{const {error}=await supabase.from('student_favorites').insert({user_id:state.user.id,file_id:String(fileId)});if(error){alert('تعذر حفظ الملف في المفضلة. تأكد من تطبيق migration_student_tools.sql.');return;}if(button)button.textContent='★ محفوظ';}}
+async function renderFavoritesPage(page){page.innerHTML='<div class="page-banner"><h2>ملفاتي المفضلة</h2><p>ملفات حفظتها للوصول إليها بسرعة.</p></div><section class="content-card" id="favoritesContent"><p>جارٍ تحميل المفضلة...</p></section>';const box=page.querySelector('#favoritesContent');const ids=await loadFavoriteIds();const accessible=getAccessibleFiles();const files=ids.map(id=>accessible.find(f=>String(f.id)===id)).filter(Boolean);box.innerHTML=files.length?`<div class="favorites-grid">${files.map(f=>`<article class="content-card"><strong>${escapeHtml(f.title||'ملف')}</strong><p>${escapeHtml(f.subject||'')} · ${escapeHtml(f.kind||'')}</p><a class="btn-primary" style="display:inline-block;width:auto;text-decoration:none" href="#/voir/${encodeURIComponent(f.id)}">فتح الملف</a><button class="btn-secondary remove-favorite" data-id="${escapeHtml(f.id)}" style="margin-inline-start:8px">إزالة</button></article>`).join('')}</div>`:'<p class="empty-state">لم تحفظ أي ملف بعد. استخدم زر «حفظ في المفضلة» في صفحة البحث.</p>';box.querySelectorAll('.remove-favorite').forEach(b=>b.onclick=async()=>{await toggleFavorite(b.dataset.id);renderFavoritesPage(page);});}
+function renderSupportPage(page){const staff=['owner','admin'].includes(state.role);page.innerHTML=`<div class="page-banner"><h2>الإبلاغ عن مشكلة</h2><p>أخبرنا عن ملف لا يفتح أو فوج غير صحيح أو مشكلة تقنية.</p></div><section class="content-card"><form id="supportReportForm" style="display:grid;gap:14px;max-width:760px"><label class="form-label">نوع المشكلة<select class="form-control" name="category" required><option value="file">ملف لا يفتح أو عرضه غير سليم</option><option value="group">الفوج غير صحيح أو غير محفوظ</option><option value="account">مشكلة في الحساب أو الدخول</option><option value="other">مشكلة أخرى</option></select></label><label class="form-label">عنوان مختصر<input class="form-control" name="title" maxlength="140" required placeholder="اكتب عنوان المشكلة"></label><label class="form-label">التفاصيل<textarea class="form-control" name="details" rows="5" maxlength="3000" required placeholder="ما الذي حدث؟ وما الصفحة التي كنت تستخدمها؟"></textarea></label><button class="btn-primary" type="submit" style="width:auto;justify-self:start">إرسال البلاغ</button><p id="supportReportMessage" role="status"></p></form></section><section class="content-card" id="supportReportsAdmin" style="display:${staff?'block':'none'}"><h3 style="color:var(--brown-dark);margin-bottom:12px">بلاغات الطلبة</h3><div id="supportReportsList">جارٍ تحميل البلاغات...</div></section>`;page.querySelector('#supportReportForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget,fd=new FormData(form),msg=page.querySelector('#supportReportMessage'),btn=form.querySelector('button');btn.disabled=true;msg.textContent='جارٍ إرسال البلاغ...';const {error}=await supabase.from('support_reports').insert({user_id:state.user.id,category:String(fd.get('category')),title:String(fd.get('title')).trim(),details:String(fd.get('details')).trim()});btn.disabled=false;if(error){msg.textContent='تعذر إرسال البلاغ. تأكد من تطبيق migration_student_tools.sql ثم أعد المحاولة.';msg.style.color='#a33b32';console.error(error);return;}form.reset();msg.textContent='تم إرسال البلاغ. شكرًا لمساعدتنا على تحسين الموقع.';msg.style.color='#28734a';};if(staff)loadSupportReports(page);}
+async function loadSupportReports(page){const box=page.querySelector('#supportReportsList');if(!box)return;const {data,error}=await supabase.from('support_reports').select('id,user_id,category,title,details,status,created_at').order('created_at',{ascending:false}).limit(100);if(error){box.innerHTML='<p class="empty-state">تعذر تحميل البلاغات. تحقق من سياسات RLS في migration_student_tools.sql.</p>';console.warn(error);return;}const labels={file:'ملف',group:'فوج',account:'حساب',other:'أخرى',open:'مفتوح',in_progress:'قيد المعالجة',resolved:'تم الحل',closed:'مغلق'};box.innerHTML=data?.length?`<div class="support-report-list">${data.map(r=>`<article class="support-report-item"><div class="support-report-heading"><strong>${escapeHtml(r.title)}</strong><span class="badge-tag">${labels[r.category]||escapeHtml(r.category)}</span></div><p>${escapeHtml(r.details)}</p><small>${formatDate(r.created_at)} · ${labels[r.status]||escapeHtml(r.status)}</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><select class="form-control support-status" data-id="${escapeHtml(r.id)}" style="max-width:220px"><option value="open" ${r.status==='open'?'selected':''}>مفتوح</option><option value="in_progress" ${r.status==='in_progress'?'selected':''}>قيد المعالجة</option><option value="resolved" ${r.status==='resolved'?'selected':''}>تم الحل</option><option value="closed" ${r.status==='closed'?'selected':''}>مغلق</option></select><button type="button" class="btn-secondary save-support-status" data-id="${escapeHtml(r.id)}">حفظ الحالة</button></div></article>`).join('')}</div>`:'<p class="empty-state">لا توجد بلاغات بعد.</p>';box.querySelectorAll('.save-support-status').forEach(btn=>btn.onclick=async()=>{const select=box.querySelector(`.support-status[data-id="${btn.dataset.id}"]`);const status=select?.value;const {error}=await supabase.from('support_reports').update({status,...(['resolved','closed'].includes(status)?{resolved_at:new Date().toISOString()}:{resolved_at:null})}).eq('id',btn.dataset.id);if(error){alert('تعذر تحديث حالة البلاغ.');return;}btn.textContent='تم الحفظ';});}
+
 function renderAccessDenied(page) {
   page.innerHTML = `
     <div class="content-card" style="text-align: center; padding: 40px;">
@@ -1045,6 +1075,12 @@ function renderHomeView(page) {
         <div class="title">الجدول الزمني</div>
         <div class="desc">البرنامج الأسبوعي وتوزيع الحصص والقاعات.</div>
       </a>
+    </div>
+
+    <div class="welcome-grid" style="margin-top:16px;">
+      <a href="#/search" class="shortcut-card"><div class="title">البحث عن ملف</div><div class="desc">ابحث حسب العنوان أو المادة أو النوع.</div></a>
+      <a href="#/favorites" class="shortcut-card"><div class="title">ملفاتي المفضلة</div><div class="desc">احتفظ بالملفات التي تحتاجها باستمرار.</div></a>
+      <a href="#/support" class="shortcut-card"><div class="title">الإبلاغ عن مشكلة</div><div class="desc">أبلغ عن ملف أو فوج أو مشكلة تقنية.</div></a>
     </div>
 
     <!-- Chips G1..G10 -->
