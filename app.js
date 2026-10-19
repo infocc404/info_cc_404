@@ -2145,7 +2145,7 @@ async function renderPdfViewerView(page, fileId) {
       </div>
 
       <div class="pdf-canvas-container" id="pdfCanvasContainer">
-        <div id="pdfLoadingState" style="color: #ffffff; padding: 40px; text-align: center;">جاري تجهيز وعرض الملف...</div>
+        <div id="pdfLoadingState" style="color: #ffffff; padding: 40px; text-align: center;">جاري فتح الملف في عارض PDF الأصلي...</div>
         <canvas id="pdfCanvas" style="display: none;"></canvas>
         <div id="pdfErrorState" style="display: none; color: #fca5a5; padding: 30px; text-align: center;"></div>
       </div>
@@ -2187,109 +2187,43 @@ function showPdfError(msg) {
 }
 
 async function loadPdfWithPdfJs(pdfUrl) {
+  // Alternative renderer: use the browser's native PDF viewer instead of PDF.js canvas.
+  // This avoids any PDF.js text/glyph rendering differences and preserves the PDF's
+  // own page layout, font positioning, tables, and vector graphics.
   const loading = document.getElementById("pdfLoadingState");
-  const canvas = document.getElementById("pdfCanvas");
-  if (!window.pdfjsLib) {
-    showPdfError("مكتبة pdf.js غير متوفرة.");
-    return;
+  const container = document.getElementById("pdfCanvasContainer");
+  if (!container) return;
+
+  let zoom = 100;
+  container.innerHTML = `
+    <iframe id="nativePdfFrame" title="معاينة ملف PDF"
+      style="display:block;width:100%;height:78vh;min-height:520px;border:0;background:#fff;"
+      referrerpolicy="no-referrer"></iframe>`;
+  const frame = document.getElementById("nativePdfFrame");
+  const setZoom = (value) => {
+    zoom = Math.max(40, Math.min(300, value));
+    const label = document.getElementById("pdfZoomLevel");
+    if (label) label.textContent = `${zoom}%`;
+    // Standard PDF viewer fragment options are supported by Chromium/Firefox PDF viewers.
+    frame.src = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&zoom=${zoom}`;
+  };
+  document.getElementById("pdfZoomIn").onclick = () => setZoom(zoom + 20);
+  document.getElementById("pdfZoomOut").onclick = () => setZoom(zoom - 20);
+  document.getElementById("pdfZoomReset").onclick = () => setZoom(100);
+  document.getElementById("pdfFitWidth").onclick = () => setZoom(100);
+  // Native viewer handles its own page navigation, so avoid duplicate controls.
+  for (const id of ["pdfPrevPage", "pdfNextPage", "pdfPageIndicator"]) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
   }
-
-  try {
-    const loadingTask = window.pdfjsLib.getDocument(pdfUrl);
-    const pdfDoc = await loadingTask.promise;
-    state.activePdfDoc = pdfDoc;
-    state.pdfCurrentPage = 1;
-    state.pdfTotalPages = pdfDoc.numPages;
-    // Start by fitting the PDF page to the available viewer width. This avoids
-    // browser-side shrinking of a large canvas, which can make fine text look broken.
-    const firstPage = await pdfDoc.getPage(1);
-    const baseViewport = firstPage.getViewport({ scale: 1 });
-    const canvasContainer = document.getElementById("pdfCanvasContainer");
-    const availableWidth = Math.max(280, (canvasContainer?.clientWidth || 900) - 40);
-    state.pdfScale = Math.min(1.5, Math.max(0.6, availableWidth / baseViewport.width));
-    const zoomLabel = document.getElementById("pdfZoomLevel");
-    if (zoomLabel) zoomLabel.textContent = `${Math.round(state.pdfScale * 100)}%`;
-
-    if (loading) loading.style.display = "none";
-    if (canvas) canvas.style.display = "block";
-
-    renderPdfPage(state.pdfCurrentPage);
-
-    document.getElementById("pdfPrevPage").onclick = () => {
-      if (state.pdfCurrentPage > 1) {
-        state.pdfCurrentPage--;
-        renderPdfPage(state.pdfCurrentPage);
-      }
-    };
-
-    document.getElementById("pdfNextPage").onclick = () => {
-      if (state.pdfCurrentPage < state.pdfTotalPages) {
-        state.pdfCurrentPage++;
-        renderPdfPage(state.pdfCurrentPage);
-      }
-    };
-
-    document.getElementById("pdfZoomIn").onclick = () => {
-      state.pdfScale = Math.min(state.pdfScale + 0.2, 2.5);
-      document.getElementById("pdfZoomLevel").textContent = `${Math.round(state.pdfScale * 100)}%`;
-      renderPdfPage(state.pdfCurrentPage);
-    };
-
-    document.getElementById("pdfZoomOut").onclick = () => {
-      state.pdfScale = Math.max(state.pdfScale - 0.2, 0.4);
-      document.getElementById("pdfZoomLevel").textContent = `${Math.round(state.pdfScale * 100)}%`;
-      renderPdfPage(state.pdfCurrentPage);
-    };
-
-    document.getElementById("pdfZoomReset").onclick = () => {
-      state.pdfScale = 1;
-      document.getElementById("pdfZoomLevel").textContent = "100%";
-      renderPdfPage(state.pdfCurrentPage);
-    };
-
-    document.getElementById("pdfFitWidth").onclick = async () => {
-      const currentPage = await state.activePdfDoc.getPage(state.pdfCurrentPage);
-      const base = currentPage.getViewport({ scale: 1 });
-      const wrap = document.getElementById("pdfCanvasContainer");
-      const width = Math.max(280, (wrap?.clientWidth || 900) - 40);
-      state.pdfScale = Math.min(3, Math.max(0.4, width / base.width));
-      document.getElementById("pdfZoomLevel").textContent = `${Math.round(state.pdfScale * 100)}%`;
-      renderPdfPage(state.pdfCurrentPage);
-    };
-  } catch (e) {
-    showPdfError(e.message || "تعذر تصيير صفحات ملف الـ PDF.");
-  }
+  if (loading) loading.style.display = "none";
+  setZoom(100);
 }
 
 async function renderPdfPage(num) {
-  if (!state.activePdfDoc) return;
-  const canvas = document.getElementById("pdfCanvas");
-  if (!canvas) return;
-
-  const page = await state.activePdfDoc.getPage(num);
-  const viewport = page.getViewport({ scale: state.pdfScale });
-  const ctx = canvas.getContext("2d", { alpha: false });
-  const outputScale = Math.max(1, window.devicePixelRatio || 1);
-
-  // Render at device pixel ratio for crisp text, while keeping the displayed
-  // canvas dimensions in CSS pixels. Zooming can exceed the viewer width and scroll.
-  canvas.width = Math.floor(viewport.width * outputScale);
-  canvas.height = Math.floor(viewport.height * outputScale);
-  canvas.style.width = `${Math.floor(viewport.width)}px`;
-  canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-  const renderContext = {
-    canvasContext: ctx,
-    viewport: viewport,
-    transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0]
-  };
-
-  await page.render(renderContext).promise;
-
-  const indicator = document.getElementById("pdfPageIndicator");
-  if (indicator) {
-    indicator.textContent = `صفحة ${num} / ${state.pdfTotalPages}`;
-  }
+  // Kept as a harmless compatibility stub for existing route code.
+  // PDF pages are rendered by the browser's native PDF viewer above.
+  return;
 }
 
 // Owner-only directory. Suspension actions are performed by a Supabase Edge Function;
