@@ -587,6 +587,9 @@ function renderApp() {
           <a href="#/" class="nav-link ${hash === "#/" ? "active" : ""}">
             <span>الرئيسية</span>
           </a>
+          <a href="#/announcements" class="nav-link ${hash === "#/announcements" ? "active" : ""}">
+            <span>الإعلانات</span>
+          </a>
           <a href="#/groupes" class="nav-link ${hash.startsWith("#/groupe") ? "active" : ""}">
             <span>الأفواج</span>
           </a>
@@ -849,6 +852,12 @@ function dispatchRoute(hash) {
     return;
   }
 
+  // #/announcements
+  if (hash === "#/announcements") {
+    renderAnnouncementsView(page);
+    return;
+  }
+
   // #/groupes
   if (hash === "#/groupes") {
     renderGroupesView(page);
@@ -933,6 +942,58 @@ function dispatchRoute(hash) {
   renderNotFoundView(page);
 }
 
+const ANNOUNCEMENT_PRIORITY = { urgent: 0, important: 1, normal: 2 };
+function canManageAnnouncements() {
+  return ["owner", "admin", "uploader"].includes(state.role);
+}
+async function loadAnnouncements() {
+  try {
+    const { data, error } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+    if (error) { console.warn("Announcements unavailable; apply migration_announcements.sql", error.message); return []; }
+    return (data || []).sort((a,b) => (ANNOUNCEMENT_PRIORITY[a.priority] ?? 2) - (ANNOUNCEMENT_PRIORITY[b.priority] ?? 2) || new Date(b.created_at) - new Date(a.created_at));
+  } catch (e) { console.warn("Could not load announcements", e); return []; }
+}
+function renderAnnouncementCard(a, manage=false) {
+  const styles = { urgent: { label: "عاجل", bg: "#fff0ed", color: "#a33b2f", border: "#efb5aa" }, important: { label: "مهم", bg: "#fff5d9", color: "#815b12", border: "#ead18c" }, normal: { label: "عام", bg: "#f5eee4", color: "#72563b", border: "#e3d3bf" } };
+  const st = styles[a.priority] || styles.normal;
+  const date = a.created_at ? new Date(a.created_at).toLocaleDateString("ar") : "";
+  return `<article style="background:#fff;border:1px solid ${st.border};border-right:4px solid ${st.color};border-radius:12px;padding:14px 16px;box-shadow:0 3px 12px #4b34200a;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:7px;"><strong style="color:var(--brown-dark);font-size:15px;">${escapeHtml(a.title || "إعلان")}</strong><span style="font-size:11px;font-weight:700;color:${st.color};background:${st.bg};border-radius:20px;padding:4px 10px;">${st.label}</span></div>
+    <p style="white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9;color:#51483e;font-size:13px;margin:0 0 8px;">${escapeHtml(a.body || "")}</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;"><small style="color:var(--muted);">${escapeHtml(date)}${a.author_label ? " · "+escapeHtml(a.author_label) : ""}</small>${manage ? `<button type="button" class="btn-secondary announcement-delete" data-id="${escapeHtml(a.id)}" style="width:auto;padding:6px 10px;color:#a33b2f;">حذف</button>` : ""}</div>
+  </article>`;
+}
+async function renderAnnouncementsView(page) {
+  const canManage = canManageAnnouncements();
+  page.innerHTML = `<div class="page-banner"><h2>الإعلانات</h2><p>إعلانات الدراسة والتنبيهات، مرتبة حسب الأهمية.</p></div>
+    ${canManage ? `<section class="content-card" style="border:1px solid #e7d6bd;background:#fffdf8;"><h3 style="color:var(--brown-dark);margin-bottom:14px;">إضافة إعلان جديد</h3><form id="announcementForm" style="display:grid;gap:12px;"><label>عنوان الإعلان<input name="title" maxlength="140" required placeholder="مثال: تغيير موعد حصة" style="display:block;width:100%;margin-top:6px;"></label><label>تفاصيل الإعلان<textarea name="body" rows="4" maxlength="5000" required placeholder="اكتب تفاصيل الإعلان هنا..." style="display:block;width:100%;margin-top:6px;resize:vertical;"></textarea></label><label>الأهمية<select name="priority" style="display:block;width:100%;margin-top:6px;"><option value="normal">عادي</option><option value="important">مهم</option><option value="urgent">عاجل</option></select></label><button class="btn-primary" type="submit" style="width:auto;justify-self:start;">نشر الإعلان</button><p id="announcementFormMessage" style="margin:0;font-size:13px;"></p></form></section>` : ""}
+    <section class="content-card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;"><h3 style="color:var(--brown-dark);margin:0;">قائمة الإعلانات</h3><span id="announcementCount" style="font-size:12px;color:var(--muted);"></span></div><div id="announcementsList" style="display:grid;gap:12px;"><p>جارٍ تحميل الإعلانات...</p></div></section>`;
+  const list = await loadAnnouncements();
+  const listEl = page.querySelector("#announcementsList");
+  const countEl = page.querySelector("#announcementCount");
+  if (!listEl) return;
+  countEl.textContent = `${list.length} إعلان`;
+  listEl.innerHTML = list.length ? list.map(a => renderAnnouncementCard(a, canManage)).join("") : '<p style="text-align:center;color:var(--muted);padding:20px;">لا توجد إعلانات منشورة حاليًا.</p>';
+  if (canManage) {
+    page.querySelector("#announcementForm")?.addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.currentTarget; const msg = page.querySelector("#announcementFormMessage");
+      const fd = new FormData(form);
+      const button = form.querySelector('button[type="submit"]'); button.disabled = true; msg.textContent = "جارٍ النشر...";
+      const { error } = await supabase.from("announcements").insert({ title: String(fd.get("title")||"").trim(), body: String(fd.get("body")||"").trim(), priority: String(fd.get("priority")||"normal"), created_by: state.user.id, author_label: state.role === "owner" ? "إدارة المنصة" : state.role === "admin" ? "المشرف" : `رئيس القسم G${state.uploaderGroup || ""}` });
+      button.disabled = false;
+      if (error) { msg.textContent = "تعذر نشر الإعلان. تأكد من تطبيق migration_announcements.sql وصلاحيات Supabase."; msg.style.color = "#a33b2f"; console.error(error); return; }
+      renderAnnouncementsView(page);
+    });
+    page.querySelectorAll(".announcement-delete").forEach(btn => btn.addEventListener("click", async () => {
+      if (!confirm("هل تريد حذف هذا الإعلان؟")) return;
+      const { error } = await supabase.from("announcements").delete().eq("id", btn.dataset.id);
+      if (error) { alert("تعذر حذف الإعلان. تحقق من صلاحيات قاعدة البيانات."); return; }
+      renderAnnouncementsView(page);
+    }));
+  }
+}
+
 function renderAccessDenied(page) {
   page.innerHTML = `
     <div class="content-card" style="text-align: center; padding: 40px;">
@@ -953,6 +1014,14 @@ function renderHomeView(page) {
       <h2>مرحباً بك، ${escapeHtml(state.user.email?.split("@")[0] || "طالب")}</h2>
       <p>منصة info cc 404 لمشاركة وتصفح ملفات الإعلام الآلي (الدفعة الأولى).</p>
     </div>
+
+    <section class="content-card announcements-home-card" style="border:1px solid #e7d6bd;background:linear-gradient(135deg,#fffdf8,#f7eddf);margin-bottom:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <div><h3 style="color:var(--brown-dark);font-size:18px;margin-bottom:4px;">الإعلانات والتنبيهات</h3><p style="font-size:12px;color:var(--muted);margin:0;">أهم المستجدات الخاصة بالدراسة</p></div>
+        <a href="#/announcements" class="btn-secondary" style="width:auto;text-decoration:none;">كل الإعلانات</a>
+      </div>
+      <div id="homeAnnouncementsList" style="display:grid;gap:10px;"><p style="color:var(--muted);font-size:13px;margin:0;">جارٍ تحميل الإعلانات...</p></div>
+    </section>
 
     ${!sg && state.role === "student" ? `
       <div class="content-card" style="border:1px solid var(--brown);background:var(--cream, #fbf7f0);margin-bottom:16px;">
@@ -1045,6 +1114,11 @@ function renderHomeView(page) {
       const fid = btn.getAttribute("data-id");
       location.hash = `#/voir/${fid}`;
     };
+  });
+  loadAnnouncements().then(items => {
+    const box = document.getElementById("homeAnnouncementsList");
+    if (!box) return;
+    box.innerHTML = items.slice(0, 3).length ? items.slice(0, 3).map(renderAnnouncementCard).join("") : '<p style="color:var(--muted);font-size:13px;margin:0;">لا توجد إعلانات حاليًا.</p>';
   });
 }
 
