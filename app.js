@@ -2181,7 +2181,7 @@ async function renderPdfViewerView(page, fileId) {
       </div>
 
       <div class="pdf-canvas-container" id="pdfCanvasContainer">
-        <div id="pdfLoadingState" style="color: #ffffff; padding: 40px; text-align: center;">جاري فتح الملف في عارض PDF الأصلي...</div>
+        <div id="pdfLoadingState" style="color: #ffffff; padding: 40px; text-align: center;">جاري تحميل الملف...</div>
         <canvas id="pdfCanvas" style="display: none;"></canvas>
         <div id="pdfErrorState" style="display: none; color: #fca5a5; padding: 30px; text-align: center;"></div>
       </div>
@@ -2223,13 +2223,183 @@ function showPdfError(msg) {
 }
 
 async function loadPdfWithPdfJs(pdfUrl) {
-  // Alternative renderer: use the browser's native PDF viewer instead of PDF.js canvas.
-  // This avoids any PDF.js text/glyph rendering differences and preserves the PDF's
-  // own page layout, font positioning, tables, and vector graphics.
+  // Canvas renderer built on PDF.js, tuned for Arabic documents.
+  // Why this fixes "stuck letters" for every file (current and future):
+  //  1) Pages are drawn at 2x-3x pixel density (devicePixelRatio aware). A 1x canvas
+  //     blurs thin Arabic strokes and dots until letters look glued together.
+  //  2) cMaps + standard fonts are loaded, so PDFs whose fonts are NOT embedded
+  //     still get correct glyph mapping instead of a broken fallback.
+  //  3) The same code path is used for every PDF, so nothing depends on one file.
+  // If PDF.js cannot load at all, we fall back to the browser's native viewer.
   const loading = document.getElementById("pdfLoadingState");
   const container = document.getElementById("pdfCanvasContainer");
   if (!container) return;
 
+  if (!window.pdfjsLib) {
+    loadPdfNativeFallback(pdfUrl);
+    return;
+  }
+
+  const PDFJS_ASSETS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/";
+  let pdfDoc;
+  try {
+    pdfDoc = await window.pdfjsLib.getDocument({
+      url: pdfUrl,
+      cMapUrl: PDFJS_ASSETS + "cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: PDFJS_ASSETS + "standard_fonts/",
+      useSystemFonts: true,
+      isEvalSupported: false
+    }).promise;
+  } catch (err) {
+    console.warn("PDF.js failed, using native viewer:", err);
+    loadPdfNativeFallback(pdfUrl);
+    return;
+  }
+
+  // Layout: LTR scroll container (avoids RTL scroll quirks), centred page column.
+  container.innerHTML = "";
+  container.style.direction = "ltr";
+  container.style.alignItems = "stretch";
+  const pagesBox = document.createElement("div");
+  pagesBox.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:14px;width:max-content;min-width:100%;";
+  container.appendChild(pagesBox);
+
+  const total = pdfDoc.numPages;
+  let zoom = 1;               // 1 = fit width
+  let renderToken = 0;
+  let observer = null;
+  let pageEls = [];
+  let lastWidth = container.clientWidth;
+
+  const indicator = document.getElementById("pdfPageIndicator");
+  const zoomLabel = document.getElementById("pdfZoomLevel");
+  const updateIndicator = (n) => { if (indicator) indicator.textContent = `صفحة ${n} / ${total}`; };
+
+  function availableWidth() {
+    const cs = getComputedStyle(container);
+    const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    return Math.max(200, container.clientWidth - pad);
+  }
+
+  async function renderPage(entry, token) {
+    if (entry.rendered || token !== renderToken) return;
+    entry.rendered = true;
+    try {
+      const page = await pdfDoc.getPage(entry.num);
+      if (token !== renderToken) return;
+      const viewport = page.getViewport({ scale: entry.cssScale });
+      // Sharpness: at least 2x, up to 3x; capped so mobile browsers keep the canvas.
+      let outScale = Math.min(Math.max(window.devicePixelRatio || 1, 2), 3);
+      const maxPixels = 16000000;
+      while (viewport.width * viewport.height * outScale * outScale > maxPixels && outScale > 1) {
+        outScale -= 0.25;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.floor(viewport.width * outScale);
+      canvas.height = Math.floor(viewport.height * outScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      canvas.style.display = "block";
+      const ctx = canvas.getContext("2d", { alpha: false });
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({
+        canvasContext: ctx,
+        viewport,
+        transform: [outScale, 0, 0, outScale, 0, 0]
+      }).promise;
+      if (token !== renderToken) return;
+      entry.el.innerHTML = "";
+      entry.el.appendChild(canvas);
+    } catch (err) {
+      entry.rendered = false;
+      console.warn("Page render failed:", entry.num, err);
+    }
+  }
+
+  async function layout() {
+    const token = ++renderToken;
+    if (observer) observer.disconnect();
+    pagesBox.innerHTML = "";
+    pageEls = [];
+
+    const first = await pdfDoc.getPage(1);
+    if (token !== renderToken) return;
+    const baseWidth = first.getViewport({ scale: 1 }).width;
+    const cssScale = (availableWidth() / baseWidth) * zoom;
+
+    observer = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          const entry = pageEls[Number(e.target.dataset.index)];
+          if (entry) renderPage(entry, token);
+        }
+      }
+    }, { root: container, rootMargin: "800px 0px" });
+
+    for (let n = 1; n <= total; n++) {
+      const page = n === 1 ? first : await pdfDoc.getPage(n);
+      if (token !== renderToken) return;
+      const vp = page.getViewport({ scale: cssScale });
+      const el = document.createElement("div");
+      el.dataset.index = String(n - 1);
+      el.style.cssText = `width:${Math.floor(vp.width)}px;height:${Math.floor(vp.height)}px;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.35);flex:0 0 auto;`;
+      pagesBox.appendChild(el);
+      const entry = { num: n, el, cssScale, rendered: false };
+      pageEls.push(entry);
+      observer.observe(el);
+    }
+    if (zoomLabel) zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
+    updateIndicator(1);
+  }
+
+  function currentPage() {
+    const top = container.getBoundingClientRect().top;
+    let best = 1, bestDist = Infinity;
+    for (const entry of pageEls) {
+      const d = Math.abs(entry.el.getBoundingClientRect().top - top - 20);
+      if (d < bestDist) { bestDist = d; best = entry.num; }
+    }
+    return best;
+  }
+
+  const goTo = (n) => {
+    const entry = pageEls[Math.max(1, Math.min(total, n)) - 1];
+    if (entry) container.scrollTo({ top: entry.el.offsetTop - 10, behavior: "smooth" });
+  };
+
+  container.addEventListener("scroll", () => updateIndicator(currentPage()), { passive: true });
+  document.getElementById("pdfPrevPage").onclick = () => goTo(currentPage() - 1);
+  document.getElementById("pdfNextPage").onclick = () => goTo(currentPage() + 1);
+  document.getElementById("pdfZoomIn").onclick = () => { zoom = Math.min(3, +(zoom + 0.25).toFixed(2)); layout(); };
+  document.getElementById("pdfZoomOut").onclick = () => { zoom = Math.max(0.5, +(zoom - 0.25).toFixed(2)); layout(); };
+  document.getElementById("pdfZoomReset").onclick = () => { zoom = 1; layout(); };
+  document.getElementById("pdfFitWidth").onclick = () => { zoom = 1; layout(); };
+
+  // Re-fit when the window width really changes (rotation, resize).
+  let resizeTimer = null;
+  const onResize = () => {
+    if (!document.body.contains(container)) { window.removeEventListener("resize", onResize); return; }
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (Math.abs(container.clientWidth - lastWidth) > 4) {
+        lastWidth = container.clientWidth;
+        layout();
+      }
+    }, 250);
+  };
+  window.addEventListener("resize", onResize);
+
+  if (loading) loading.style.display = "none";
+  await layout();
+}
+
+function loadPdfNativeFallback(pdfUrl) {
+  // Last-resort viewer: the browser's built-in PDF viewer.
+  const loading = document.getElementById("pdfLoadingState");
+  const container = document.getElementById("pdfCanvasContainer");
+  if (!container) return;
   let zoom = 100;
   container.innerHTML = `
     <iframe id="nativePdfFrame" title="معاينة ملف PDF"
@@ -2240,26 +2410,18 @@ async function loadPdfWithPdfJs(pdfUrl) {
     zoom = Math.max(40, Math.min(300, value));
     const label = document.getElementById("pdfZoomLevel");
     if (label) label.textContent = `${zoom}%`;
-    // Standard PDF viewer fragment options are supported by Chromium/Firefox PDF viewers.
     frame.src = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&zoom=${zoom}`;
   };
   document.getElementById("pdfZoomIn").onclick = () => setZoom(zoom + 20);
   document.getElementById("pdfZoomOut").onclick = () => setZoom(zoom - 20);
   document.getElementById("pdfZoomReset").onclick = () => setZoom(100);
   document.getElementById("pdfFitWidth").onclick = () => setZoom(100);
-  // Native viewer handles its own page navigation, so avoid duplicate controls.
   for (const id of ["pdfPrevPage", "pdfNextPage", "pdfPageIndicator"]) {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   }
   if (loading) loading.style.display = "none";
   setZoom(100);
-}
-
-async function renderPdfPage(num) {
-  // Kept as a harmless compatibility stub for existing route code.
-  // PDF pages are rendered by the browser's native PDF viewer above.
-  return;
 }
 
 // Owner-only directory. Suspension actions are performed by a Supabase Edge Function;
