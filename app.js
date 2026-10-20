@@ -305,7 +305,7 @@ function translateAuthError(msg) {
 // 7. LOGGED-OUT VIEW RENDERER
 function renderLoggedOut(errorMessage = "", successMessage = "") {
   rootEl.innerHTML = `
-    <div class="auth-container">
+    <div class="auth-container login-page">
       <div class="auth-wrapper">
         <div class="auth-panel-banner">
           <div class="logo-badge mono">info_cc_404</div>
